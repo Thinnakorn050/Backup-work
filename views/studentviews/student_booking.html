@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Booking</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@10">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: rgb(15, 15, 52);
+            color: #fff;
+        }
+
+        h2 {
+            text-align: center;
+            font-size: 30px;
+            margin-top: 50px;
+        }
+
+        form {
+            width: 50%;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 30px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        label {
+            display: block;
+            margin-bottom: 10px;
+            color: #000;
+            /* เปลี่ยนสีตัวอักษรของ label เป็นสีดำ */
+        }
+
+        input[type="text"],
+        textarea {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 20px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        .available-btn {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            background-color: #4CAF50;
+            /* เปลี่ยนสีปุ่ม */
+            color: #fff;
+            border: none;
+            border-radius: 20px;
+            /* เพิ่มรัศมีขอบปุ่ม */
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .available-btn:hover {
+            background-color: #45a049;
+            /* สีปุ่มเข้มขึ้นเมื่อชี้เม้าส์ */
+        }
+
+        select {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 20px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+            appearance: none;
+            background-image: linear-gradient(45deg, transparent 50%, #000 50%), linear-gradient(135deg, #000 50%, transparent 50%);
+            background-position: calc(100% - 20px) calc(1em + 2px), calc(100% - 15px) calc(1em + 2px);
+            background-size: 5px 5px, 5px 5px;
+            background-repeat: no-repeat;
+        }
+    </style>
+
+</head>
+
+<body>
+    <h2>Student Booking</h2>
+    <div id="timeSlots"></div>
+    <form id="bookingForm">
+        <label for="roomname">Room Name:</label><br>
+        <input type="text" id="roomname" name="roomname" required><br>
+        <label for="room_status">Room Status:</label><br>
+        <select id="room_status" name="room_status" required>
+            <option value="available">Available</option>
+            <option value="pending">pending</option>
+            <option value="reserved">reserved</option>
+            <option value="disable">disable</option>
+
+        </select><br>
+
+        <label for="time_slot">Time Slot:</label><br>
+        <select id="time_slot" name="time_slot" required>
+            <option value="">Select Time Slot</option>
+            <option value="08:00-10:00">08:00-10:00</option>
+            <option value="10:00-12:00">10:00-12:00</option>
+            <option value="12:00-14:00">12:00-14:00</option>
+            <option value="14:00-16:00">14:00-16:00</option>
+        </select><br>
+
+        <label for="reason">Reason:</label><br>
+        <textarea id="reason" name="reason" required></textarea><br>
+        <input type="hidden" id="status" name="status" value="pending">
+        <button type="submit" class="available-btn">Submit</button>
+    </form>
+
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@10"></script>
+    <script>
+        document.getElementById('bookingForm').addEventListener('submit', function (event) {
+            event.preventDefault();
+            const formData = new FormData(this);
+            const bookingData = {};
+            formData.forEach((value, key) => {
+                bookingData[key] = value;
+            });
+
+            axios.post('/api/bookings', bookingData)
+                .then(response => {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Booking Successful',
+                        text: 'Your booking has been successfully recorded.'
+                    }).then(() => {
+                        window.location.href = '/student_status.html';
+                    });
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Booking Failed',
+                        text: 'There was an error while processing your booking. Please try again later.'
+                    });
+                });
+        });
+
+        axios.get('/api/room_availability')
+            .then(response => {
+                const roomAvailability = response.data;
+                const roomAvailabilityContainer = document.getElementById('roomAvailability');
+                const roomStatusDropdown = document.getElementById('room_status');
+                const timeSlotDropdown = document.getElementById('time_slot');
+
+                roomAvailability.forEach(room => {
+                    const { room_number, time_slot, status } = room;
+                    const roomDiv = document.createElement('div');
+                    roomDiv.classList.add('room');
+                    roomDiv.innerHTML = `
+                <h3>Room ${room_number}</h3>
+                <p>Time Slot: ${time_slot}</p>
+                <p>Status: ${status}</p>
+            `;
+                    roomAvailabilityContainer.appendChild(roomDiv);
+
+                    const option = document.createElement('option');
+                    option.value = room_number;
+                    option.textContent = `Room ${room_number}`;
+                    if (status !== 'available') {
+                        option.disabled = true;
+                    }
+                    roomStatusDropdown.appendChild(option);
+                });
+
+                // จัดการเลือกช่วงเวลาตามที่กำหนด
+                timeSlotDropdown.addEventListener('change', function() {
+                    // รับช่วงเวลาที่เลือก
+                    const selectedTimeSlot = this.value;
+                    // วนลูปตรวจสอบและป้องกันการเลือกช่วงเวลาที่ผ่านมา
+                    for (let option of this.options) {
+                        if (option.value !== selectedTimeSlot && option.value !== "") {
+                            const previousTimeSlot = option.value;
+                            // ตรวจสอบว่าช่วงเวลาที่ผ่านมามีสถานะเป็น "available" หรือไม่
+                            const isAvailable = roomAvailability.some(room => room.time_slot === previousTimeSlot && room.status === 'available');
+                            if (isAvailable) {
+                                option.disabled = false; // ทำให้เป็นเลือกได้
+                            } else {
+                                option.disabled = true; // ทำให้ไม่เป็นเลือกได้
+                            }
+                        }
+                    }
+                });
+            })
+            .catch(error => console.error('Error fetching room availability: ', error));
+
+    </script>
+</body>
+
+</html>
